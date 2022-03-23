@@ -1,5 +1,7 @@
 # Firestore LiveData
 
+Forked from [Firestore-Livedata from Brotoo25](https://github.com/brotoo25/firestore-livedata).
+
 ## What's this?
 
 Set of Kotlin extension functions used to convert realtime updates from Firebase Firestore collections/documents into LiveData objects (Android Architecture Components).
@@ -8,7 +10,7 @@ Set of Kotlin extension functions used to convert realtime updates from Firebase
 
 Gradle:
 
-```groovy
+``` groovy
 allprojects {
     repositories {
         ...

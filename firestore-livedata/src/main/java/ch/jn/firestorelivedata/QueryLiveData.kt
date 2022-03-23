@@ -1,38 +1,41 @@
-package com.kiwimob.firestore.livedata
+package ch.jn.firestorelivedata
 
 import android.util.Log
 import androidx.lifecycle.LiveData
-import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.QuerySnapshot
 
-fun <T> DocumentReference.livedata(clazz: Class<T>): LiveData<T> {
-    return DocumentLiveDataNative(this, clazz)
+fun <T> Query.livedata(clazz: Class<T>): LiveData<List<T>> {
+    return QueryLiveDataNative(this, clazz)
 }
 
-fun <T> DocumentReference.livedata(parser: (documentSnapshot: DocumentSnapshot) -> T): LiveData<T> {
-    return DocumentLiveDataCustom(this, parser)
+fun <T> Query.livedata(parser: (documentSnapshot: DocumentSnapshot) -> T): LiveData<List<T>> {
+    return QueryLiveDataCustom(this, parser)
 }
 
-fun DocumentReference.livedata(): LiveData<DocumentSnapshot> {
-    return DocumentLiveDataRaw(this)
+fun Query.livedata(): LiveData<QuerySnapshot> {
+    return QueryLiveDataRaw(this)
 }
 
-private sealed class DocumentLiveDataBasic<T>(
-    private val documentReference: DocumentReference,
+private sealed class QueryLiveDataBasic<T>(
+    private val query: Query,
     private val documentToObject: (documentSnapshot: DocumentSnapshot) -> T
 ) :
-    LiveData<T>() {
+    LiveData<List<T>>() {
 
     private var listener: ListenerRegistration? = null
 
     override fun onActive() {
         super.onActive()
 
-        listener = documentReference.addSnapshotListener { documentSnapshot, exception ->
+        listener = query.addSnapshotListener { querySnapshot, exception ->
             if (exception == null) {
-                documentSnapshot?.let {
-                    value = documentToObject.invoke(it)
+                querySnapshot?.let {
+                    value = it.documents.map { documentSnapshot ->
+                        documentToObject.invoke(documentSnapshot)
+                    }
                 }
             } else {
                 Log.e("FireStoreLiveData", "", exception)
@@ -48,37 +51,36 @@ private sealed class DocumentLiveDataBasic<T>(
     }
 }
 
-private class DocumentLiveDataNative<T>(
-    documentReference: DocumentReference,
+private class QueryLiveDataNative<T>(
+    query: Query,
     private val clazz: Class<T>
-) : DocumentLiveDataBasic<T>(
-    documentReference = documentReference,
+) : QueryLiveDataBasic<T>(
+    query = query,
     documentToObject = { documentSnapshot ->
         documentSnapshot.toObject(clazz)!!
     }
 )
 
-private class DocumentLiveDataCustom<T>(
-    documentReference: DocumentReference,
+private class QueryLiveDataCustom<T>(
+    query: Query,
     private val parser: (documentSnapshot: DocumentSnapshot) -> T
-) : DocumentLiveDataBasic<T>(
-    documentReference = documentReference,
+) : QueryLiveDataBasic<T>(
+    query = query,
     documentToObject = { documentSnapshot ->
         parser.invoke(documentSnapshot)
     }
 )
 
-class DocumentLiveDataRaw(private val documentReference: DocumentReference) :
-    LiveData<DocumentSnapshot>() {
+private class QueryLiveDataRaw(private val query: Query) : LiveData<QuerySnapshot>() {
 
     private var listener: ListenerRegistration? = null
 
     override fun onActive() {
         super.onActive()
 
-        listener = documentReference.addSnapshotListener { documentSnapshot, exception ->
+        listener = query.addSnapshotListener { querySnapshot, exception ->
             if (exception == null) {
-                value = documentSnapshot
+                value = querySnapshot
             } else {
                 Log.e("FireStoreLiveData", "", exception)
             }
