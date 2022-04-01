@@ -7,12 +7,12 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.QuerySnapshot
 
-fun <T> CollectionReference.livedata(clazz: Class<T>): LiveData<List<T>> {
-    return CollectionLiveDataNative(this, clazz)
+fun <T> CollectionReference.livedata(clazz: Class<T>, defaultValue: List<T>): LiveData<List<T>> {
+    return CollectionLiveDataNative(this, clazz, defaultValue)
 }
 
-fun <T> CollectionReference.livedata(parser: (documentSnapshot: DocumentSnapshot) -> T): LiveData<List<T>> {
-    return CollectionLiveDataCustom(this, parser)
+fun <T> CollectionReference.livedata(parser: (documentSnapshot: DocumentSnapshot) -> T, defaultValue: List<T>): LiveData<List<T>> {
+    return CollectionLiveDataCustom(this, parser, defaultValue)
 }
 
 fun CollectionReference.livedata(): LiveData<QuerySnapshot> {
@@ -21,11 +21,16 @@ fun CollectionReference.livedata(): LiveData<QuerySnapshot> {
 
 private sealed class CollectionLiveDataBasic<T>(
     private val collectionReference: CollectionReference,
-    private val documentToObject: (documentSnapshot: DocumentSnapshot) -> T
+    private val documentToObject: (documentSnapshot: DocumentSnapshot) -> T,
+    defaultValue: List<T>
 ) :
     LiveData<List<T>>() {
 
     private var listener: ListenerRegistration? = null
+
+    init {
+        value = defaultValue
+    }
 
     override fun onActive() {
         super.onActive()
@@ -55,22 +60,26 @@ private sealed class CollectionLiveDataBasic<T>(
 
 private class CollectionLiveDataNative<T>(
     collectionReference: CollectionReference,
-    private val clazz: Class<T>
+    clazz: Class<T>,
+    defaultValue: List<T>
 ) : CollectionLiveDataBasic<T>(
     collectionReference = collectionReference,
     documentToObject = { documentSnapshot ->
         documentSnapshot.toObject(clazz)!!
-    }
+    },
+    defaultValue = defaultValue
 )
 
 private class CollectionLiveDataCustom<T>(
     collectionReference: CollectionReference,
-    private val parser: (documentSnapshot: DocumentSnapshot) -> T
+    parser: (documentSnapshot: DocumentSnapshot) -> T,
+    defaultValue: List<T>
 ) : CollectionLiveDataBasic<T>(
     collectionReference = collectionReference,
     documentToObject = { documentSnapshot ->
         parser.invoke(documentSnapshot)
-    }
+    },
+    defaultValue = defaultValue
 )
 
 private class CollectionLiveDataRaw(private val collectionReference: CollectionReference) :

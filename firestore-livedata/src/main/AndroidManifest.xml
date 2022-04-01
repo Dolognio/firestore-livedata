@@ -1,2 +1,1 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="ch.jn.firestorelivedata" />
+<manifest package="ch.jn.firestorelivedata" />

@@ -8,7 +8,7 @@ android {
         minSdkVersion 16
         targetSdkVersion 31
         versionCode 1
-        versionName "1.0"
+        versionName "1.1"
 
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
@@ -32,7 +32,7 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 
     // Firebase
-    compileOnly 'com.google.firebase:firebase-firestore:24.0.2'
+    compileOnly 'com.google.firebase:firebase-firestore:24.1.0'
 
     // Architecture Components
     compileOnly 'androidx.lifecycle:lifecycle-livedata-ktx:2.4.1'

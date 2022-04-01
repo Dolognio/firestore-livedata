@@ -6,12 +6,12 @@ import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.ListenerRegistration
 
-fun <T> DocumentReference.livedata(clazz: Class<T>): LiveData<T> {
-    return DocumentLiveDataNative(this, clazz)
+fun <T> DocumentReference.livedata(clazz: Class<T>, defaultValue: T?): LiveData<T> {
+    return DocumentLiveDataNative(this, clazz, defaultValue)
 }
 
-fun <T> DocumentReference.livedata(parser: (documentSnapshot: DocumentSnapshot) -> T): LiveData<T> {
-    return DocumentLiveDataCustom(this, parser)
+fun <T> DocumentReference.livedata(parser: (documentSnapshot: DocumentSnapshot) -> T, defaultValue: T?): LiveData<T> {
+    return DocumentLiveDataCustom(this, parser, defaultValue)
 }
 
 fun DocumentReference.livedata(): LiveData<DocumentSnapshot> {
@@ -20,11 +20,16 @@ fun DocumentReference.livedata(): LiveData<DocumentSnapshot> {
 
 private sealed class DocumentLiveDataBasic<T>(
     private val documentReference: DocumentReference,
-    private val documentToObject: (documentSnapshot: DocumentSnapshot) -> T
+    private val documentToObject: (documentSnapshot: DocumentSnapshot) -> T,
+    defaultValue: T?
 ) :
     LiveData<T>() {
 
     private var listener: ListenerRegistration? = null
+
+    init {
+        value = defaultValue
+    }
 
     override fun onActive() {
         super.onActive()
@@ -50,22 +55,26 @@ private sealed class DocumentLiveDataBasic<T>(
 
 private class DocumentLiveDataNative<T>(
     documentReference: DocumentReference,
-    private val clazz: Class<T>
+    clazz: Class<T>,
+    defaultValue: T?
 ) : DocumentLiveDataBasic<T>(
     documentReference = documentReference,
     documentToObject = { documentSnapshot ->
         documentSnapshot.toObject(clazz)!!
-    }
+    },
+    defaultValue = defaultValue
 )
 
 private class DocumentLiveDataCustom<T>(
     documentReference: DocumentReference,
-    private val parser: (documentSnapshot: DocumentSnapshot) -> T
+    parser: (documentSnapshot: DocumentSnapshot) -> T,
+    defaultValue: T?
 ) : DocumentLiveDataBasic<T>(
     documentReference = documentReference,
     documentToObject = { documentSnapshot ->
         parser.invoke(documentSnapshot)
-    }
+    },
+    defaultValue = defaultValue
 )
 
 class DocumentLiveDataRaw(private val documentReference: DocumentReference) :

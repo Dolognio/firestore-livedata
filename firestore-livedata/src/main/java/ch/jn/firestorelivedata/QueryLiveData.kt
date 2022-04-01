@@ -7,12 +7,12 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
 
-fun <T> Query.livedata(clazz: Class<T>): LiveData<List<T>> {
-    return QueryLiveDataNative(this, clazz)
+fun <T> Query.livedata(clazz: Class<T>, defaultValue: List<T>): LiveData<List<T>> {
+    return QueryLiveDataNative(this, clazz, defaultValue)
 }
 
-fun <T> Query.livedata(parser: (documentSnapshot: DocumentSnapshot) -> T): LiveData<List<T>> {
-    return QueryLiveDataCustom(this, parser)
+fun <T> Query.livedata(parser: (documentSnapshot: DocumentSnapshot) -> T, defaultValue: List<T>): LiveData<List<T>> {
+    return QueryLiveDataCustom(this, parser, defaultValue)
 }
 
 fun Query.livedata(): LiveData<QuerySnapshot> {
@@ -21,11 +21,16 @@ fun Query.livedata(): LiveData<QuerySnapshot> {
 
 private sealed class QueryLiveDataBasic<T>(
     private val query: Query,
-    private val documentToObject: (documentSnapshot: DocumentSnapshot) -> T
+    private val documentToObject: (documentSnapshot: DocumentSnapshot) -> T,
+    defaultValue: List<T>
 ) :
     LiveData<List<T>>() {
 
     private var listener: ListenerRegistration? = null
+
+    init {
+        value = defaultValue
+    }
 
     override fun onActive() {
         super.onActive()
@@ -53,22 +58,26 @@ private sealed class QueryLiveDataBasic<T>(
 
 private class QueryLiveDataNative<T>(
     query: Query,
-    private val clazz: Class<T>
+    clazz: Class<T>,
+    defaultValue: List<T>
 ) : QueryLiveDataBasic<T>(
     query = query,
     documentToObject = { documentSnapshot ->
         documentSnapshot.toObject(clazz)!!
-    }
+    },
+    defaultValue = defaultValue
 )
 
 private class QueryLiveDataCustom<T>(
     query: Query,
-    private val parser: (documentSnapshot: DocumentSnapshot) -> T
+    parser: (documentSnapshot: DocumentSnapshot) -> T,
+    defaultValue: List<T>
 ) : QueryLiveDataBasic<T>(
     query = query,
     documentToObject = { documentSnapshot ->
         parser.invoke(documentSnapshot)
-    }
+    },
+    defaultValue = defaultValue
 )
 
 private class QueryLiveDataRaw(private val query: Query) : LiveData<QuerySnapshot>() {
